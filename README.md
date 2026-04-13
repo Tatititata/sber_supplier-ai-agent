@@ -69,11 +69,7 @@ curl -X GET http://localhost:8000/cp/tasks/<task_id> \
 ## Запуск тестов
 
 ```bash
-# Через Docker
 docker compose run --rm app pytest tests/ -v
-
-# Локально (требуется виртуальное окружение)
-pytest tests/ -v
 ```
 
 ## Примеры запросов (curl)
