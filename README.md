@@ -69,7 +69,7 @@ curl -X GET http://localhost:8000/cp/tasks/<task_id> \
 ## Запуск тестов
 
 ```bash
-docker compose run --rm app pytest tests/ -v
+docker compose run --rm app pytest tests/ -v 
 ```
 
 ## Примеры запросов (curl)
@@ -88,7 +88,7 @@ TOKEN=$(curl -s -X POST http://localhost:8000/token \
 ```bash
 RESPONSE=$(curl -s -X POST http://localhost:8000/cp/tasks \
   -H "Authorization: Bearer $TOKEN" \
-  -F "file=@test.zip")
+  -F "file=@test.txt") # Передаваемый файл должен существовать
 TASK_ID=$(echo $RESPONSE | jq -r '.task_id')
 ```
 
