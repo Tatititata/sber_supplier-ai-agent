@@ -1,33 +1,104 @@
-fastapi — создание API-эндпоинтов, валидация запросов, dependency injection.
+# Supplier AI Agent
 
-uvicorn — ASGI-сервер для запуска FastAPI.
+Сервис для асинхронной обработки архивов с коммерческими предложениями.
 
-sqlalchemy — ORM для работы с PostgreSQL. Превращает Python-объекты в SQL-запросы и обратно.
+## Как запустить проект
 
-asyncpg — асинхронный драйвер PostgreSQL. SQLAlchemy без него не подключится к базе.
+```bash
+git clone https://github.com/Tatititata/sber_supplier-ai-agent.git
+cd sber_supplier-ai-agent
+docker compose up -d --build
+```
+Сервис будет доступен по адресу: `http://localhost:8000`  
+Документация API: `http://localhost:8000/docs`
 
-alembic — миграции схемы БД.
+## Технологии
 
-python-multipart — FastAPI требует эту библиотеку для обработки загружаемых файлов (multipart/form-data). Без неё UploadFile не работает.
+Python 3.12 — язык программирования  
+FastAPI — веб-фреймворк  
+PostgreSQL — база данных  
+SQLAlchemy — ORM  
+Alembic — миграции  
+Docker — контейнеризация  
+JWT — аутентификация  
+Pytest — тестирование  
 
-python-jose[cryptography] — создание и проверка JWT-токенов для аутентификации.
+## Архитектура
 
-passlib[bcrypt] — хеширование паролей пользователей.
+app/main.py — эндпоинты API  
+app/auth.py — JWT аутентификация и ролевая модель  
+app/task_handler.py — бизнес-логика (создание задач, фоновя обработка, работа с БД)  
+app/models.py — SQLAlchemy модели  
+app/database.py — подключение к PostgreSQL  
+tests/ — unit-тесты
 
-pytest — запуск unit-тестов.
-
-pytest-asyncio — поддержка асинхронных тестов (pytest не умеет тестировать async-функции без этого).
-
-httpx — HTTP-клиент для тестирования API (замена requests в асинхронном коде).
-
-
-
+Асинхронная обработка реализована через BackgroundTasks FastAPI. После загрузки файла задача сохраняется в БД со статусом pending, запускается фоновая обработка (имитация парсинга), статус меняется на processing, затем на completed или failed.
 
 
-Инициализировать alembic: alembic init migrations
+## Компромиссы
 
-Настроить alembic.ini: раскомментировать и указать sqlalchemy.url = postgresql://agent:agent123@localhost:5432/supplier_agent
+Парсинг данных заглушен случайной генерацией (имитация AI)  
+Аутентификация использует in-memory словарь пользователей (в production заменить на БД)  
+Фоновые задачи не сохраняются при перезапуске приложения
 
-Настроить migrations/env.py: добавить импорт from app.models import Task и target_metadata = Base.metadata (импортировать Base из app.database)
+## Как проверить
 
-Сгенерировать миграцию: alembic revision --autogenerate -m "create tasks table"
+#### Получить токен
+
+```bash
+curl -X POST http://localhost:8000/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=user&password=userpassword"
+```
+
+#### Создать задачу
+
+```bash
+curl -X POST http://localhost:8000/cp/tasks \
+  -H "Authorization: Bearer <token>" \
+  -F "file=@test.zip"
+```
+
+#### Получить статус задачи
+
+```bash
+curl -X GET http://localhost:8000/cp/tasks/<task_id> \
+  -H "Authorization: Bearer <token>"
+```
+
+## Запуск тестов
+
+```bash
+# Через Docker
+docker compose run --rm app pytest tests/ -v
+
+# Локально (требуется виртуальное окружение)
+pytest tests/ -v
+```
+
+## Примеры запросов (curl)
+
+
+#### 1. Получение токена
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8000/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=user&password=userpassword" | jq -r '.access_token')
+```
+
+#### 2. Создание задачи
+
+```bash
+RESPONSE=$(curl -s -X POST http://localhost:8000/cp/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@test.zip")
+TASK_ID=$(echo $RESPONSE | jq -r '.task_id')
+```
+
+#### 3. Получение статуса
+
+```bash
+curl -s -X GET http://localhost:8000/cp/tasks/$TASK_ID \
+  -H "Authorization: Bearer $TOKEN" | jq '.'
+```
